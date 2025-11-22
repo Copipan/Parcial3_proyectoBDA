@@ -1,0 +1,93 @@
+CREATE CONSTRAINT FOR (u:User) REQUIRE u.id IS UNIQUE;
+CREATE CONSTRAINT FOR (t:Tag) REQUIRE t.id IS UNIQUE;
+CREATE CONSTRAINT FOR (c:Category) REQUIRE c.id IS UNIQUE;
+CREATE CONSTRAINT FOR (a:Article) REQUIRE a.id IS UNIQUE;
+CREATE CONSTRAINT FOR (k:Comment) REQUIRE k.id IS UNIQUE;
+
+UNWIND [
+  { id: 0, name: "Admin", email: "admin@admin.com"},
+  { id: 1, name: "Carlos Mendoza", email: "carlos.mendoza@example.com" },
+  { id: 2, name: "María López", email: "maria.lopez@example.com" },
+  { id: 3, name: "Juan Pérez", email: "juan.perez@example.com" },
+  { id: 4, name: "Ana Castillo", email: "ana.castillo@example.com" },
+  { id: 5, name: "Luis Hernández", email: "luis.hernandez@example.com" },
+  { id: 6, name: "Paola Ramírez", email: "paola.ramirez@example.com" },
+  { id: 7, name: "Andrés Torres", email: "andres.torres@example.com" },
+  { id: 8, name: "Sofía Navarro", email: "sofia.navarro@example.com" },
+  { id: 9, name: "Ricardo Gutiérrez", email: "ricardo.gutierrez@example.com" },
+  { id: 10, name: "Elena Vargas", email: "elena.vargas@example.com" }
+] AS row
+CREATE (u:User {id: row.id, name: row.name, email: row.email});
+
+UNWIND [
+  { id: 1, name: "tecnologia", url: "www.blogtech.com/tecnologia" },
+  { id: 2, name: "ciberseguridad", url: "www.seguridadonline.com/articulos" },
+  { id: 3, name: "programacion", url: "www.devworld.com/tutoriales" },
+  { id: 4, name: "futbol", url: "www.deportes.com/futbol" },
+  { id: 5, name: "videojuegos", url: "www.gamershub.com/news" },
+  { id: 6, name: "educacion", url: "www.educacionhoy.com/cursos" },
+  { id: 7, name: "noticias", url: "www.mundonoticias.com/ultimas" },
+  { id: 8, name: "cocina", url: "www.recetasychef.com/blog" },
+  { id: 9, name: "viajes", url: "www.viajerosglobal.com/guias" },
+  { id: 10, name: "economia", url: "www.finanzasfacil.com/reportes" }
+] AS row
+CREATE (t:Tag {id: row.id, name: row.name, url: row.url});
+
+UNWIND [
+  { id: 1, name: "Tecnología" },
+  { id: 2, name: "Deportes" },
+  { id: 3, name: "Entretenimiento" },
+  { id: 4, name: "Educación" },
+  { id: 5, name: "Cocina" }
+] AS row
+CREATE (c:Category {id: row.id, name: row.name});
+
+UNWIND [
+  { id: 1, title: "La revolución de la inteligencia artificial", content: "La IA está transformando...", author_id: 1, tags: [1, 3], categories: [1], date: "2025-01-15" },
+  { id: 2, title: "Consejos para proteger tus datos personales", content: "En la era digital...", author_id: 2, tags: [2, 1], categories: [1], date: "2025-02-10" },
+  { id: 3, title: "Los videojuegos más esperados del año", content: "El mundo gamer...", author_id: 5, tags: [5, 3], categories: [3], date: "2025-03-22" },
+  { id: 4, title: "Educación en línea: ventajas y desafíos", content: "Las plataformas digitales...", author_id: 6, tags: [6, 1], categories: [4], date: "2025-04-12" },
+  { id: 5, title: "Recetas saludables para el día a día", content: "Aprende a cocinar...", author_id: 10, tags: [8], categories: [5], date: "2025-05-01" }
+] AS row
+
+// 1. Crear el Artículo
+CREATE (a:Article {id: row.id, title: row.title, content: row.content, createdAt: date(row.date)})
+
+// 2. Conectar con el Autor (User -> WROTE -> Article)
+WITH a, row
+MATCH (u:User {id: row.author_id})
+MERGE (u)-[:WROTE]->(a)
+
+// 3. Conectar con Tags (Article -> TAGGED_WITH -> Tag)
+WITH a, row
+UNWIND row.tags AS tagId
+MATCH (t:Tag {id: tagId})
+MERGE (a)-[:TAGGED_WITH]->(t)
+
+// 4. Conectar con Categorías (Article -> IN_CATEGORY -> Category)
+WITH a, row
+UNWIND row.categories AS catId
+MATCH (c:Category {id: catId})
+MERGE (a)-[:IN_CATEGORY]->(c);
+
+UNWIND [
+  { id: 1, article_id: 1, user_id: 3, text: "Excelente artículo...", date: "2025-01-16" },
+  { id: 2, article_id: 1, user_id: 7, text: "Interesante perspectiva...", date: "2025-01-17" },
+  { id: 3, article_id: 2, user_id: 4, text: "Muy útiles los consejos...", date: "2025-02-11" },
+  { id: 4, article_id: 3, user_id: 9, text: "¡Ya quiero jugar...", date: "2025-03-23" },
+  { id: 5, article_id: 5, user_id: 8, text: "Las recetas se ven...", date: "2025-05-02" }
+] AS row
+
+// Crear Comentario
+CREATE (com:Comment {id: row.id, text: row.text, createdAt: date(row.date)})
+
+// Conectar quien lo escribió (User -> POSTED -> Comment)
+WITH com, row
+MATCH (u:User {id: row.user_id})
+MERGE (u)-[:POSTED]->(com)
+
+// Conectar dónde se escribió (Comment -> ON_ARTICLE -> Article)
+WITH com, row
+MATCH (a:Article {id: row.article_id})
+MERGE (com)-[:ON_ARTICLE]->(a);
+

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Admin - Artículos</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .article-details {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-color-secondary);
+        }
+
+        .tags-container, .categories-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            margin-top: 0.3rem;
+        }
+
+        .tag-pill, .category-pill {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--primary-color);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .comments-section {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .comments-toggle {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .comments-toggle:hover {
+            color: #b9932f;
+        }
+
+        .comments-container {
+            margin-top: 0.8rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .comments-container.expanded {
+            max-height: 500px;
+        }
+
+        .comment-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.8rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.3rem;
+            font-size: 0.75rem;
+        }
+
+        .comment-author {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .comment-text {
+            color: var(--text-color-primary);
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .no-comments {
+            color: var(--text-color-secondary);
+            font-style: italic;
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .loading-comments {
+            text-align: center;
+            color: var(--text-color-secondary);
+            font-size: 0.8rem;
+            padding: 0.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .btn-info {
+            background: rgba(23, 162, 184, 0.2);
+            color: #17a2b8;
+            border: 1px solid rgba(23, 162, 184, 0.3);
+        }
+
+        .btn-info:hover {
+            background: rgba(23, 162, 184, 0.3);
+            color: #138496;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Blog Admin Panel</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="articulos.html" class="active">Artículos</a></li>
+                    <li><a href="categorias.html">Categorías</a></li>
+                    <li><a href="comentarios.html">Comentarios</a></li>
+                    <li><a href="tags.html">Tags</a></li>
+                    <li><a href="usuarios.html">Usuarios</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="management-section">
+            <h2>Gestión de Artículos</h2>
+            
+            <div class="form-container">
+                <h3 id="form-title">Agregar Nuevo Artículo</h3>
+                <form id="article-form">
+                    <input type="hidden" id="article-id">
+                    <div class="form-group">
+                        <label for="titulo">Título:</label>
+                        <input type="text" id="titulo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="article-text">Contenido:</label>
+                        <textarea id="article-text" rows="6" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Tags:</label>
+                        <div id="tags-container" class="selectable-list"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Categorías:</label>
+                        <div id="categories-container" class="selectable-list"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        <button type="button" id="cancel-edit" class="btn btn-secondary">Cancelar</button>
+                    </div>
+                </form>
+
+            </div>
+            
+            <div class="table-container">
+                <h3>Lista de Artículos</h3>
+                <table id="articles-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuario</th>
+                            <th>Título</th>
+                            <th>Tags & Categorías</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Los artículos se cargarán dinámicamente aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Blog Admin - Proyecto Bases de Datos Avanzadas</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // Función para alternar la visibilidad de comentarios
+        function toggleComments(articleId) {
+            const container = document.getElementById(`comments-${articleId}`);
+            const button = document.querySelector(`[onclick="toggleComments(${articleId})"]`);
+            
+            if (container.classList.contains('expanded')) {
+                // Si ya está expandido, contraer
+                container.classList.remove('expanded');
+                button.innerHTML = '💬 Ver comentarios';
+            } else {
+                // Si está contraído, expandir y cargar comentarios si no se han cargado
+                container.classList.add('expanded');
+                button.innerHTML = '💬 Ocultar comentarios';
+                
+                // Solo cargar comentarios si no se han cargado antes
+                if (!container.hasAttribute('data-loaded')) {
+                    loadComments(articleId, container);
+                }
+            }
+        }
+
+        // Función para cargar comentarios de un artículo
+        async function loadComments(articleId, container) {
+            container.innerHTML = '<div class="loading-comments">Cargando comentarios...</div>';
+            
+            try {
+                const response = await fetch(`http://localhost:5000/api/articulos/${articleId}/comentarios`);
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar comentarios');
+                }
+                
+                const data = await response.json();
+                
+                if (data.count === 0) {
+                    container.innerHTML = '<div class="no-comments">No hay comentarios para este artículo</div>';
+                } else {
+                    container.innerHTML = data.comentarios.map(comentario => `
+                        <div class="comment-item">
+                            <div class="comment-header">
+                                <span class="comment-author">${comentario.user_name}</span>
+                            </div>
+                            <div class="comment-text">${comentario.comment}</div>
+                        </div>
+                    `).join('');
+                }
+                
+                // Marcar como cargado
+                container.setAttribute('data-loaded', 'true');
+                
+            } catch (error) {
+                console.error('Error cargando comentarios:', error);
+                container.innerHTML = '<div class="no-comments">Error al cargar comentarios</div>';
+            }
+        }
+    </script>
+</body>
+</html>
