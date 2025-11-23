@@ -230,17 +230,17 @@ async function loadRealData() {
             tags.forEach(tag => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${tag.tname}</td>
+                    <td>${tag.name}</td>
                     <td>
-                        <a href="articulos_tag.html?tag=${encodeURIComponent(tag.tname)}" 
+                        <a href="articulos_tag.html?tag=${encodeURIComponent(tag.name)}" 
                         class="category-link" 
                         title="Ver artículos con este tag">
-                            ${tag.tagurl}
+                            ${tag.url}
                         </a>
                     </td>
                     <td class="action-buttons">
-                        <button class="btn btn-primary btn-sm" onclick="editTag('${tag.tname.replace(/'/g, "\\'")}', '${tag.tagurl.replace(/'/g, "\\'")}')">Editar</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteTag('${tag.tname.replace(/'/g, "\\'")}')">Eliminar</button>
+                        <button class="btn btn-primary btn-sm" onclick="editTag('${tag.name.replace(/'/g, "\\'")}', '${tag.url.replace(/'/g, "\\'")}')">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteTag('${tag.name.replace(/'/g, "\\'")}')">Eliminar</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -440,15 +440,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 else if (form.id === 'tag-form') {
                     // Lógica para tags sin cambios
                     const data = {
-                        tname: document.getElementById('tag-name').value,
-                        tagurl: document.getElementById('url-tag').value
+                        name: document.getElementById('tag-name').value,
+                        url: document.getElementById('url-tag').value
                     };
                     console.log(data)
                     if (isEdit) {
                         const originalName = document.getElementById('original-tag-name').value;
                         await apiCall(`/tags/${encodeURIComponent(originalName)}`, {
                             method: 'PUT',
-                            body: JSON.stringify({ tname: data.tname, tagurl: data.tagurl })
+                            body: JSON.stringify({ name: data.name, url: data.url })
                         });
                     } else {
                         await apiCall('/tags', { method: 'POST', body: JSON.stringify(data) });

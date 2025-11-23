@@ -5,7 +5,7 @@ import urllib.parse
 usuarios_bp = Blueprint('usuarios_bp', __name__)
 
 # GET /api/usuarios
-@usuarios_bp.route('', methods=['GET'])
+@usuarios_bp.route('', methods=['GET'], strict_slashes=False)
 def get_usuarios():
     driver = get_driver()
     
@@ -29,7 +29,7 @@ def get_usuarios():
 
 
 # POST /api/usuarios
-@usuarios_bp.route('', methods=['POST'])
+@usuarios_bp.route('', methods=['POST'], strict_slashes=False)
 def create_usuario():
     data = request.get_json()
     # 1. Validar datos de entrada
@@ -52,10 +52,16 @@ def create_usuario():
                 return jsonify({"error": "El email ya existe"}), 409
 
             # 3. Crear el usuario
-            # Usamos randomUUID() para generar un ID único automáticamente
+            # 3.1 Buscamos el ID más alto actual
+            # COALESCE es para que si no hay tags (devuelve null), use 0 por defecto.
+            id_query = "MATCH (t:User) RETURN coalesce(max(t.id), 0) + 1 as nextId"
+            id_result = session.run(id_query).single()
+            
+            # Este es tu nuevo ID (ej: si el max era 10, ahora new_id es 11)
+            new_id = id_result["nextId"]
             create_query = """
             CREATE (u:User {
-                id: randomUUID(), 
+                id: $id, 
                 name: $name, 
                 email: $email
             }) 
@@ -63,7 +69,7 @@ def create_usuario():
             """
             
             # Ejecutamos pasando las variables para evitar inyección
-            insert_result = session.run(create_query, name=name, email=email).single()
+            insert_result = session.run(create_query, id=new_id, name=name, email=email).single()
             
             if insert_result:
                 # Convertimos el nodo creado a diccionario para responder
@@ -154,51 +160,3 @@ def delete_usuario(email):
             
     except Exception as e:
         return jsonify(error=str(e)), 500
-
-# PUT /api/usuarios/<originalEmail>
-# @usuarios_bp.route('/<string:originalEmail>', methods=['PUT'])
-# def update_usuario(originalEmail):
-#     try:
-#         data = request.get_json()
-#         decoded_email = urllib.parse.unquote(originalEmail)
-        
-#         updates = {}
-#         # Asumimos que el JS envía 'name' y 'email' basado en el script de la DB
-#         if data.get('name_bool') == 1:
-#             updates["name"] = data.get('name')
-#         if data.get('email_bool') == 1:
-#             updates["email"] = data.get('email')
-
-#         if not updates:
-#             return jsonify({"error": "No hay campos para actualizar"}), 400
-            
-#         # --- LÓGICA CORREGIDA ---
-#         result = mongo.db.users.update_one(
-#             {"email": decoded_email},
-#             {"$set": updates}
-#         )
-        
-#         if result.matched_count == 0:
-#             return jsonify({"error": "Usuario no encontrado"}), 404
-            
-#         return jsonify({"message": "Usuario actualizado"})
-        
-#     except Exception as e:
-#         return jsonify(error=str(e)), 500
-
-# # DELETE /api/usuarios/<email>
-# @usuarios_bp.route('/<string:email>', methods=['DELETE'])
-# def delete_usuario(email):
-#     try:
-#         decoded_email = urllib.parse.unquote(email)
-        
-#         # --- LÓGICA CORREGIDA ---
-#         result = mongo.db.users.delete_one({"email": decoded_email})
-        
-#         if result.deleted_count == 0:
-#             return jsonify({"error": "Usuario no encontrado"}), 404
-            
-#         return "", 204 # 204 No Content (éxito sin respuesta)
-        
-#     except Exception as e:
-#         return jsonify(error=str(e)), 500

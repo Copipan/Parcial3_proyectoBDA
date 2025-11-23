@@ -1,69 +1,117 @@
-from flask import Blueprint, request, jsonify
-from extensions import mongo
+from flask import Blueprint, jsonify, request
+from extensions import get_driver
 import urllib.parse
-from bson import json_util
-import json
 
 tags_bp = Blueprint('tags', __name__)
 
 # GET /api/tags
-@tags_bp.route('', methods=['GET']) # <-- CORREGIDO: de '/' a ''
+@tags_bp.route('', methods=['GET'], strict_slashes=False)
 def get_tags():
+    driver = get_driver()
+    # Recuperamos todos los nodos con la etiqueta Tag
+    query = "MATCH (t:Tag) RETURN t"
+    
     try:
-        # --- LÓGICA CORREGIDA ---
-        cursor = mongo.db.tags.find()
-        tags = json.loads(json_util.dumps(cursor))
-        return jsonify(tags)
+        with driver.session() as session:
+            result = session.run(query)
+            
+            tags = []
+            for record in result:
+                # Convertimos el nodo a diccionario
+                tag_data = dict(record["t"])
+                tags.append(tag_data)
+            return jsonify(tags)
+            
     except Exception as e:
         return jsonify(error=str(e)), 500
 
 # POST /api/tags
-@tags_bp.route('', methods=['POST']) # <-- CORREGIDO: de '/' a ''
+@tags_bp.route('', methods=['POST'], strict_slashes=False)
 def create_tag():
+    data = request.get_json() # Espera: { tname, tagurl }
+    print(data)
+    # 1. Validar campos
+    if 'name' not in data or 'url' not in data:
+        return jsonify({"error": "Faltan los campos 'name' y 'url'"}), 400
+    
+    driver = get_driver()
+    name = data['name']
+    url = data['url']
+    
     try:
-        data = request.get_json() # Espera: { tname, tagurl }
-        
-        # --- LÓGICA CORREGIDA ---
-        # Validar campos correctos (de scriptbasemongo.txt)
-        if 'tname' not in data or 'tagurl' not in data:
-            return jsonify({"error": "Faltan los campos 'tname' y 'tagurl'"}), 400
-        
-        # Verificar duplicados
-        if mongo.db.tags.find_one({"tname": data['tname']}):
-            return jsonify({"error": "Ese 'tname' de tag ya existe"}), 409
+        with driver.session() as session:
+            # 2. Verificar duplicados
+            # Buscamos si existe un Tag con ese tname
+            check_query = "MATCH (t:Tag {name: $name}) RETURN count(t) as existe"
+            check_result = session.run(check_query, name=name).single()
+            
+            if check_result["existe"] > 0:
+                return jsonify({"error": "Ese 'name' de tag ya existe"}), 409
 
-        result = mongo.db.tags.insert_one(data)
-        
-        new_tag = mongo.db.tags.find_one({"_id": result.inserted_id})
-        return jsonify(json.loads(json_util.dumps(new_tag))), 201
-        
+            # 3. Insertar
+            # 3.1 Buscamos el ID más alto actual
+            # COALESCE es para que si no hay tags (devuelve null), use 0 por defecto.
+            id_query = "MATCH (t:Tag) RETURN coalesce(max(t.id), 0) + 1 as nextId"
+            id_result = session.run(id_query).single()
+            
+            # Este es tu nuevo ID (ej: si el max era 10, ahora new_id es 11)
+            new_id = id_result["nextId"]
+            # Nota: Guardamos las propiedades 'tname' y 'tagurl' tal cual las pide el frontend.
+            create_query = """
+            CREATE (t:Tag {
+                id: $id,
+                name: $name, 
+                url: $url
+            }) 
+            RETURN t
+            """
+            
+            insert_result = session.run(create_query, id=new_id, name=name, url=url).single()
+            
+            if insert_result:
+                new_tag = dict(insert_result["t"])
+                return jsonify(new_tag), 201
+            else:
+                return jsonify({"error": "No se pudo crear el tag"}), 500
+                
     except Exception as e:
         return jsonify(error=str(e)), 500
 
-# PUT /api/tags/<tname> (Usamos 'tname' para consistencia)
-@tags_bp.route('/<string:tname>', methods=['PUT'])
-def update_tag(tname):
+# PUT /api/tags/<tname>
+@tags_bp.route('/<string:name>', methods=['PUT'])
+def update_tag(name):
     try:
-        data = request.get_json() # Espera: { tname, tagurl }
-        decoded_name = urllib.parse.unquote(tname)
+        data = request.get_json()
+        decoded_name = urllib.parse.unquote(name)
         
-        # Validar campos
-        if 'tname' not in data or 'tagurl' not in data:
-            return jsonify({"error": "Faltan los campos 'tname' y 'tagurl'"}), 400
+        # 1. Validar campos (Igual que en Mongo)
+        if 'name' not in data or 'url' not in data:
+            return jsonify({"error": "Faltan los campos 'name' y 'url'"}), 400
 
-        # --- LÓGICA CORREGIDA ---
-        # Busca por 'tname' (de scriptbasemongo.txt)
-        result = mongo.db.tags.update_one(
-            {"tname": decoded_name},
-            {"$set": data}
-        )
+        driver = get_driver()
         
-        if result.matched_count == 0:
-            return jsonify({"error": "Tag no encontrado"}), 404
+        # 2. Actualizar
+        # Buscamos por el nombre ORIGINAL (decoded_name).
+        # Actualizamos con los nuevos datos (data).
+        # Si data['tname'] es diferente al original, esto renombra el tag efectivamente.
+        query = """
+        MATCH (t:Tag {name: $original_name})
+        SET t += $props
+        RETURN t
+        """
+        
+        with driver.session() as session:
+            result = session.run(query, original_name=decoded_name, props=data)
+            record = result.single()
             
-        return jsonify({"message": "Tag actualizado"})
-        
+            if not record:
+                return jsonify({"error": "Tag no encontrado"}), 404
+            
+            return jsonify({"message": "Tag actualizado"})
+            
     except Exception as e:
+        # Nota: Si intentas renombrar a un tag que ya existe y tienes UNIQUE CONSTRAINTS,
+        # esto lanzará un error que caerá aquí.
         return jsonify(error=str(e)), 500
 
 # DELETE /api/tags/<tname>
@@ -71,15 +119,67 @@ def update_tag(tname):
 def delete_tag(tname):
     try:
         decoded_name = urllib.parse.unquote(tname)
+        driver = get_driver()
+        print(decoded_name)
         
-        # --- LÓGICA CORREGIDA ---
-        # Busca por 'tname' (de scriptbasemongo.txt)
-        result = mongo.db.tags.delete_one({"tname": decoded_name})
+        # 3. Eliminar
+        query = """
+        MATCH (t:Tag {name: $name})
+        DETACH DELETE t
+        """
         
-        if result.deleted_count == 0:
-            return jsonify({"error": "Tag no encontrado"}), 404
+        with driver.session() as session:
+            result = session.run(query, name=decoded_name)
+            summary = result.consume()
             
-        return "", 204 # Éxito sin contenido
-        
+            if summary.counters.nodes_deleted == 0:
+                return jsonify({"error": "Tag no encontrado"}), 404
+            
+            return "", 204 # Éxito sin contenido
+            
     except Exception as e:
         return jsonify(error=str(e)), 500
+
+# PUT /api/tags/<tname> (Usamos 'tname' para consistencia)
+# @tags_bp.route('/<string:tname>', methods=['PUT'])
+# def update_tag(tname):
+#     try:
+#         data = request.get_json() # Espera: { tname, tagurl }
+#         decoded_name = urllib.parse.unquote(tname)
+        
+#         # Validar campos
+#         if 'tname' not in data or 'tagurl' not in data:
+#             return jsonify({"error": "Faltan los campos 'tname' y 'tagurl'"}), 400
+
+#         # --- LÓGICA CORREGIDA ---
+#         # Busca por 'tname' (de scriptbasemongo.txt)
+#         result = mongo.db.tags.update_one(
+#             {"tname": decoded_name},
+#             {"$set": data}
+#         )
+        
+#         if result.matched_count == 0:
+#             return jsonify({"error": "Tag no encontrado"}), 404
+            
+#         return jsonify({"message": "Tag actualizado"})
+        
+#     except Exception as e:
+#         return jsonify(error=str(e)), 500
+
+# # DELETE /api/tags/<tname>
+# @tags_bp.route('/<string:tname>', methods=['DELETE'])
+# def delete_tag(tname):
+#     try:
+#         decoded_name = urllib.parse.unquote(tname)
+        
+#         # --- LÓGICA CORREGIDA ---
+#         # Busca por 'tname' (de scriptbasemongo.txt)
+#         result = mongo.db.tags.delete_one({"tname": decoded_name})
+        
+#         if result.deleted_count == 0:
+#             return jsonify({"error": "Tag no encontrado"}), 404
+            
+#         return "", 204 # Éxito sin contenido
+        
+#     except Exception as e:
+#         return jsonify(error=str(e)), 500
