@@ -243,7 +243,6 @@ async function loadRealData() {
             
             comentarios.forEach(comentario => {
                 const tr = document.createElement('tr');
-                // --- CAMBIO: Se eliminó el botón de Editar ---
                 tr.innerHTML = `
                     <td>${comentario._id}</td>
                     <td>${comentario.article_title} (ID: ${comentario.article_id})</td>
@@ -345,7 +344,9 @@ async function deleteComment(id) {
             await apiCall(`/comentarios/${id}`, { method: 'DELETE' });
             showMessage('Comentario eliminado correctamente', 'success');
             loadRealData();
-        } catch (error) {}
+        } catch (error) {
+            // El error ya se maneja en apiCall
+        }
     }
 }
 
