@@ -140,6 +140,32 @@ def delete_tag(tname):
     except Exception as e:
         return jsonify(error=str(e)), 500
 
+# GET /api/tags/ids
+@tags_bp.route('/ids', methods=['GET'])
+def get_tags_with_ids():
+    driver = get_driver()
+    query = "MATCH (t:Tag) RETURN t.id as _id, t.name as tname ORDER BY t.name"
+    
+    try:
+        with driver.session() as session:
+            result = session.run(query)
+            tags = []
+            
+            for record in result:
+                tag_data = dict(record)
+                # Asegurarnos de que estamos serializando correctamente
+                tag_serializado = {
+                    "_id": tag_data.get("_id"),
+                    "tname": tag_data.get("tname")
+                }
+                tags.append(tag_serializado)
+                
+            print(f"Tags encontrados: {tags}")  # Debug
+            return jsonify(tags)
+    except Exception as e:
+        print(f"Error en /tags/ids: {e}")  # Debug
+        return jsonify({"error": str(e)}), 500
+
 # PUT /api/tags/<tname> (Usamos 'tname' para consistencia)
 # @tags_bp.route('/<string:tname>', methods=['PUT'])
 # def update_tag(tname):

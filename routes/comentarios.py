@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from extensions import mongo
+#from extensions import mongo
 from bson import json_util
 import json
 import datetime # Para añadir la fecha de creación

@@ -8,11 +8,19 @@ const path = window.location.pathname;
 
 
 // Función genérica para renderizar la lista
+// Función genérica para renderizar la lista
 function renderSelectableList(containerId, items, selectedSet) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
 
-    if (!items || items.length === 0) {
+    // Verificar que items sea un array
+    if (!items || !Array.isArray(items)) {
+        console.error(`Items no es un array para ${containerId}:`, items);
+        container.innerHTML = `<p class="no-items">Error al cargar elementos</p>`;
+        return;
+    }
+
+    if (items.length === 0) {
         container.innerHTML = `<p class="no-items">No hay elementos disponibles</p>`;
         return;
     }
@@ -20,14 +28,25 @@ function renderSelectableList(containerId, items, selectedSet) {
     items.forEach(item => {
         const el = document.createElement('div');
         el.className = 'selectable-item';
-        el.textContent = item.category_name || item.tname || item.tagurl || item.url_cat || 'Desconocido';
+        
+        // Manejar diferentes estructuras de datos
+        const displayText = item.category_name || item.tname || item.name || item.tagurl || item.url_cat || 'Desconocido';
+        el.textContent = displayText;
+
+        // Usar el ID correcto según la estructura
+        const itemId = item._id || item.id;
+        
+        if (!itemId) {
+            console.warn('Item sin ID:', item);
+            return; // Saltar items sin ID
+        }
 
         el.addEventListener('click', () => {
-            if (selectedSet.has(item._id)) {
-                selectedSet.delete(item._id);
+            if (selectedSet.has(itemId)) {
+                selectedSet.delete(itemId);
                 el.classList.remove('selected');
             } else {
-                selectedSet.add(item._id);
+                selectedSet.add(itemId);
                 el.classList.add('selected');
             }
         });
@@ -70,6 +89,7 @@ function showMessage(message, type = 'info') {
 }
 
 // Función para hacer peticiones a la API
+// Función para hacer peticiones a la API
 async function apiCall(endpoint, options = {}) {
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -81,8 +101,14 @@ async function apiCall(endpoint, options = {}) {
         });
         
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Error en la petición');
+            let errorMessage = 'Error en la petición';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorMessage;
+            } catch (e) {
+                errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
         }
         
         // Solo intenta parsear JSON si hay contenido
@@ -101,9 +127,15 @@ async function apiCall(endpoint, options = {}) {
 // Funciones para obtener datos desde la API
 async function loadTags() {
     try {
-        const response = await fetch(`${API_BASE_URL}/tags`);
+        const response = await fetch(`${API_BASE_URL}/tags/ids`);
+        console.log("Response status:", response.status);
+        console.log("Response ok:", response.ok);
+        
         const data = await response.json();
-        console.log(data)
+        console.log("Tags data:", data);
+        console.log("Type of data:", typeof data);
+        console.log("Is array?", Array.isArray(data));
+        
         renderSelectableList('tags-container', data, selectedTags);
     } catch (error) {
         console.error('Error al cargar los tags:', error);
@@ -113,11 +145,14 @@ async function loadTags() {
 
 async function loadCategorias() {
     try {
-        const response = await fetch(`${API_BASE_URL}/categorias`);
+        const response = await fetch(`${API_BASE_URL}/categorias/ids`);
+        console.log("Categorias response status:", response.status);
+        
         const data = await response.json();
-        console.log(data)
+        console.log("Categorias data:", data);
+        console.log("Type of categorias data:", typeof data);
+        
         renderSelectableList('categories-container', data, selectedCategories);
-        console.log(selectedTags)
     } catch (error) {
         console.error('Error al cargar las categorías:', error);
         showMessage('Error al cargar las categorías', 'error');
