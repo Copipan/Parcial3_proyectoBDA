@@ -160,7 +160,7 @@ def get_tags_with_ids():
                 }
                 tags.append(tag_serializado)
                 
-            print(f"Tags encontrados: {tags}")  # Debug
+            
             return jsonify(tags)
     except Exception as e:
         print(f"Error en /tags/ids: {e}")  # Debug

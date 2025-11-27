@@ -1,13 +1,11 @@
-// Configuración de la API
+// script-articulos-categoria.js (versión corregida)
 const API_BASE_URL = 'http://localhost:5000/api';
 
-// Función para obtener parámetros de la URL
 function getQueryParam(param) {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(param);
 }
 
-// Función para mostrar mensajes (similar a la del script principal)
 function showMessage(message, type = 'info') {
     const messageEl = document.createElement('div');
     messageEl.className = `message message-${type}`;
@@ -40,7 +38,6 @@ function showMessage(message, type = 'info') {
     }, 3000);
 }
 
-// Función para cargar artículos por categoría
 async function loadArticulosPorCategoria() {
     const categoria = getQueryParam('categoria');
     
@@ -49,7 +46,6 @@ async function loadArticulosPorCategoria() {
         return;
     }
     
-    // Actualizar título
     document.getElementById('titulo-categoria').textContent = `Artículos de: ${categoria}`;
     
     try {
@@ -59,28 +55,21 @@ async function loadArticulosPorCategoria() {
         }
         const data = await response.json();
         
-        // Ocultar mensaje de carga
         document.getElementById('loading-message').style.display = 'none';
         
-        if (
-            !data || 
-            data.count === 0 || 
-            (Array.isArray(data.articulos) && data.articulos.length === 0)
-        ) {
+        if (!data || data.count === 0 || !data.articulos || data.articulos.length === 0) {
             document.getElementById('no-articles-message').style.display = 'block';
             return;
         }
         
-        // Mostrar contenedor de artículos
         const container = document.getElementById('articles-container');
         container.style.display = 'block';
         
-        // Generar HTML para los artículos
         container.innerHTML = data.articulos.map(articulo => `
             <div class="article-card">
                 <div class="article-header">
                     <h3 class="article-title">${articulo.title}</h3>
-                    <span class="article-date">${new Date(articulo.created_at.$date).toLocaleDateString('es-ES')}</span>
+                    <span class="article-date">${new Date(articulo.created_at).toLocaleDateString('es-ES')}</span>
                 </div>
                 <div class="article-author">
                     <strong>Autor:</strong> ${articulo.author_name}
@@ -103,11 +92,10 @@ async function loadArticulosPorCategoria() {
         
     } catch (error) {
         console.error('Error cargando artículos:', error);
-        document.getElementById('loading-message').style.display = 'None';
+        document.getElementById('loading-message').style.display = 'none';
         document.getElementById('no-articles-message').style.display = 'block';
         showMessage('Error al cargar los artículos: ' + error.message, 'error');
     }
 }
 
-// Cargar artículos cuando la página esté lista
 document.addEventListener('DOMContentLoaded', loadArticulosPorCategoria);

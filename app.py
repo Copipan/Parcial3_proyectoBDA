@@ -10,6 +10,8 @@ from routes.categorias import categorias_bp
 from routes.tags import tags_bp
 from routes.usuarios import usuarios_bp
 from routes.comentarios import comentarios_bp
+from routes.categoria_articulos import categoria_articulos_bp
+from routes.tag_articulos import tag_articulos_bp
 
 from URI import URI, USER, PASSWORD
 
@@ -41,6 +43,8 @@ app.register_blueprint(categorias_bp, url_prefix='/api/categorias')
 app.register_blueprint(tags_bp, url_prefix='/api/tags')
 app.register_blueprint(usuarios_bp, url_prefix='/api/usuarios')
 app.register_blueprint(comentarios_bp, url_prefix='/api/comentarios')
+app.register_blueprint(categoria_articulos_bp, url_prefix='/api/categoria')
+app.register_blueprint(tag_articulos_bp, url_prefix='/api/tag')
 
 # --- Endpoint de prueba simple para saber que pudimos conectarnos ---
 @app.route('/api/debug/connection')

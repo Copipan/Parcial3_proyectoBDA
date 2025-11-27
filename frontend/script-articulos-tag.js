@@ -1,3 +1,4 @@
+// script-articulos-tag.js
 // Configuración de la API
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -63,7 +64,7 @@ async function loadArticulosPorTag() {
         // Ocultar mensaje de carga
         document.getElementById('loading-message').style.display = 'none';
         
-        if (data.count === 0) {
+        if (!data || data.count === 0 || !data.articulos || data.articulos.length === 0) {
             // Mostrar mensaje de no hay artículos
             document.getElementById('no-articles-message').style.display = 'block';
             return;
@@ -78,7 +79,7 @@ async function loadArticulosPorTag() {
             <div class="article-card">
                 <div class="article-header">
                     <h3 class="article-title">${articulo.title}</h3>
-                    <span class="article-date">${new Date(articulo.created_at.$date).toLocaleDateString('es-ES')}</span>
+                    <span class="article-date">${new Date(articulo.created_at).toLocaleDateString('es-ES')}</span>
                 </div>
                 <div class="article-author">
                     <strong>Autor:</strong> ${articulo.author_name}
