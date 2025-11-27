@@ -25,6 +25,8 @@ CORS(app, resources={
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
+#opcion mas permisiva
+#CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # --- 1. Inicializar Neo4j ---
 try:

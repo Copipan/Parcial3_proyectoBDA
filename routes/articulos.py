@@ -181,7 +181,8 @@ def delete_articulo(id):
             # Eliminar el artículo y todas sus relaciones
             query = """
             MATCH (a:Article {id: $id})
-            DETACH DELETE a
+            OPTIONAL MATCH (c:Comment)-[:ON_ARTICLE]->(a)
+            DETACH DELETE a, c
             """
             
             result = session.run(query, id=id)
