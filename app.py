@@ -18,15 +18,15 @@ from URI import URI, USER, PASSWORD
 app = Flask(__name__)
 
 # Configurar CORS más específicamente
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["http://127.0.0.1:5200", "http://localhost:5200"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+# CORS(app, resources={
+#     r"/api/*": {
+#         "origins": ["http://127.0.0.1:5200", "http://localhost:5200"],
+#         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+#         "allow_headers": ["Content-Type", "Authorization"]
+#     }
+# })
 #opcion mas permisiva
-#CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # --- 1. Inicializar Neo4j ---
 try:

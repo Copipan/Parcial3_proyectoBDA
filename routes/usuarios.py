@@ -142,7 +142,10 @@ def delete_usuario(email):
         # (Nota: Los artículos y comentarios quedan huérfanos, no se borran ellos, solo el autor).
         query = """
         MATCH (u:User {email: $email})
-        DETACH DELETE u
+        OPTIONAL MATCH (u)-[:POSTED]->(c:Comment)
+        OPTIONAL MATCH (u)-[:WROTE]->(a:Article)
+        OPTIONAL MATCH (a)<-[:ON_ARTICLE]-(ca:Comment)
+        DETACH DELETE u, c, a, ca
         """
         
         with driver.session() as session:
